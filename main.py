@@ -1,5 +1,4 @@
 import random
-import sys
 from typing import List, Tuple
 import numpy as np
 
@@ -16,8 +15,7 @@ def ackley(x: float, y: float) -> float:
 
 # Функция приспособленности
 def fitness(ind: Tuple[float, float]) -> float:
-    x, y = ind
-    return ackley(x, y)
+    return ackley(*ind)
 
 
 # Генерация начальной популяции
@@ -30,14 +28,14 @@ def initial_population(
     ]
 
 
-# Селекция родителей
+# Селекция родителей (приспособленность как веса)
 def select_parents(
     population: List[Tuple[float, float]],
 ) -> Tuple[Tuple[float, float], Tuple[float, float]]:
     fitness_values: List[float] = [fitness(ind) for ind in population]
     parents: List[Tuple[float, float]] = random.choices(
         population,
-        weights=[1.0 / f or sys.float_info.epsilon for f in fitness_values],
+        weights=[1.0 / f for f in fitness_values],
         k=2,
     )
     return parents[0], parents[1]
@@ -61,15 +59,12 @@ def mutate(
     y_range: Tuple[float, float],
 ) -> Tuple[float, float]:
     if random.random() < mutation_rate:
-        x = solution[0] + random.uniform(*x_range)
-        y = solution[1] + random.uniform(*y_range)
-        x = np.clip(x, x_range[0], x_range[1])
-        y = np.clip(y, y_range[0], y_range[1])
-        return (x, y)
+        x = random.uniform(*x_range)
+        y = random.uniform(*y_range)
+        return x, y
     return solution
 
 
-# Основной генетический алгоритм
 def genetic_algorithm(
     x_range: Tuple[float, float] = (-5, 5),
     y_range: Tuple[float, float] = (-5, 5),
@@ -77,7 +72,6 @@ def genetic_algorithm(
     generations: int = 100,
     mutation_rate: float = 0.1,
 ) -> Tuple[float, float]:
-    # Генерация начальной популяции
     population: List[Tuple[float, float]] = initial_population(
         pop_size, x_range, y_range
     )
@@ -102,20 +96,44 @@ def genetic_algorithm(
     return best_solution
 
 
+def find_best_solution(n, x_range, y_range, pop_size, generations, mutation_rate):
+    best_solution = genetic_algorithm(
+        x_range=x_range,
+        y_range=y_range,
+        pop_size=pop_size,
+        generations=generations,
+        mutation_rate=mutation_rate,
+    )
+    for _ in range(n - 1):
+        solution = genetic_algorithm(
+            x_range=x_range,
+            y_range=y_range,
+            pop_size=pop_size,
+            generations=generations,
+            mutation_rate=mutation_rate,
+        )
+        if abs(ackley(*solution)) < abs(ackley(*best_solution)):
+            best_solution = solution
+    return best_solution
+
+
+N = 1
 X_RANGE = (-5, 5)
 Y_RANGE = (-5, 5)
-POP_SIZE = 50
+POP_SIZE = 70
 GENERATIONS = 300
-MUTATION_RATE = 0.15
+MUTATION_RATE = 0.1
 
-# Запуск алгоритма
-best_solution = genetic_algorithm(
+
+best_solution = find_best_solution(
+    n=N,
     x_range=X_RANGE,
     y_range=Y_RANGE,
     pop_size=POP_SIZE,
     generations=GENERATIONS,
     mutation_rate=MUTATION_RATE,
 )
+
 
 print(
     f"Лучшее решение: {best_solution}, Значение функции Экли: {ackley(*best_solution)}"
