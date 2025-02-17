@@ -1,6 +1,7 @@
 import random
 from typing import List, Tuple
 import numpy as np
+from black.lines import Callable
 
 
 # Функция Экли
@@ -14,8 +15,8 @@ def ackley(x: float, y: float) -> float:
 
 
 # Функция приспособленности
-def fitness(ind: Tuple[float, float]) -> float:
-    return ackley(*ind)
+def fitness(func: Callable[[float,float], float] ,ind: Tuple[float, float]) -> float:
+    return func(*ind)
 
 
 # Генерация начальной популяции
@@ -30,9 +31,10 @@ def initial_population(
 
 # Селекция родителей (приспособленность как веса)
 def select_parents(
+    func: Callable[[float,float], float],
     population: List[Tuple[float, float]],
 ) -> Tuple[Tuple[float, float], Tuple[float, float]]:
-    fitness_values: List[float] = [fitness(ind) for ind in population]
+    fitness_values: List[float] = [fitness(func, ind) for ind in population]
     parents: List[Tuple[float, float]] = random.choices(
         population,
         weights=[1.0 / f for f in fitness_values],
@@ -43,12 +45,13 @@ def select_parents(
 
 # Кроссовер (среднее арифметическое)
 def crossover(
+func: Callable[[float,float], float],
     parent1: Tuple[float, float], parent2: Tuple[float, float]
 ) -> Tuple[float, float]:
     if random.random() < 0.5:
         return (parent1[0] + parent2[0]) / 2, (parent1[1] + parent2[1]) / 2
     else:
-        return parent1 if fitness(parent1) < fitness(parent2) else parent2
+        return parent1 if fitness(func,parent1) < fitness(func,parent2) else parent2
 
 
 # Мутация (случайное изменение)
@@ -66,6 +69,7 @@ def mutate(
 
 
 def genetic_algorithm(
+    func: Callable[[float, float], float],
     x_range: Tuple[float, float] = (-5, 5),
     y_range: Tuple[float, float] = (-5, 5),
     pop_size: int = 50,
@@ -75,13 +79,13 @@ def genetic_algorithm(
     population: List[Tuple[float, float]] = initial_population(
         pop_size, x_range, y_range
     )
-    best_solution: Tuple[float, float] = min(population, key=fitness)
+    best_solution: Tuple[float, float] = min(population, key=lambda x: fitness(func, x))
 
     for _ in range(generations):
         new_population = []
         for _ in range(pop_size // 2):
-            parent1, parent2 = select_parents(population)
-            child1, child2 = crossover(parent1, parent2), crossover(parent1, parent2)
+            parent1, parent2 = select_parents(func, population)
+            child1, child2 = crossover(func, parent1, parent2), crossover(func, parent1, parent2)
             new_population.extend(
                 [
                     mutate(child1, mutation_rate, x_range, y_range),
@@ -89,15 +93,16 @@ def genetic_algorithm(
                 ]
             )
         population = new_population
-        best_in_population: Tuple[float, float] = min(population, key=fitness)
-        if fitness(best_in_population) < fitness(best_solution):
+        best_in_population: Tuple[float, float] = min(population, key=lambda x: fitness(func, x))
+        if fitness(func, best_in_population) < fitness(func, best_solution):
             best_solution = best_in_population
 
     return best_solution
 
 
-def find_best_solution(n, x_range, y_range, pop_size, generations, mutation_rate):
+def find_best_solution(func ,n, x_range, y_range, pop_size, generations, mutation_rate):
     best_solution = genetic_algorithm(
+        func=func,
         x_range=x_range,
         y_range=y_range,
         pop_size=pop_size,
@@ -106,6 +111,7 @@ def find_best_solution(n, x_range, y_range, pop_size, generations, mutation_rate
     )
     for _ in range(n - 1):
         solution = genetic_algorithm(
+            func = func,
             x_range=x_range,
             y_range=y_range,
             pop_size=pop_size,
@@ -123,9 +129,11 @@ Y_RANGE = (-5, 5)
 POP_SIZE = 70
 GENERATIONS = 300
 MUTATION_RATE = 0.1
+FUNC = ackley
 
 
 best_solution = find_best_solution(
+    func=FUNC,
     n=N,
     x_range=X_RANGE,
     y_range=Y_RANGE,
