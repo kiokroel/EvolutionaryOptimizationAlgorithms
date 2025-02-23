@@ -13,6 +13,22 @@ def ackley(x: float, y: float) -> float:
     )
 
 
+def rastrigin(x, y):
+    return (
+        20
+        + (x**2 - 10 * np.cos(2 * np.pi * x))
+        + (y**2 - 10 * np.cos(2 * np.pi * y))
+    )
+
+
+def holder_table(x, y):
+    return -np.abs(
+        np.sin(x)
+        * np.cos(y)
+        * np.exp(np.abs(1 - np.sqrt(x**2 + y**2) / np.pi))
+    )
+
+
 def find_best_solution(
     target_func, alg, n, x_range, y_range, pop_size, generations, mutation_rate
 ):
